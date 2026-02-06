@@ -6,6 +6,8 @@ const { testConnection } = require("./config/database");
 
 // Import routes
 const authRoutes = require("./routes/auth.routes");
+app.use("/api/student", studentRoutes);
+app.use("/api/teacher", teacherRoutes); 
 
 const app = express();
 
