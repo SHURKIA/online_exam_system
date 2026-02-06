@@ -6,8 +6,8 @@ const { testConnection } = require("./config/database");
 
 // Import routes
 const authRoutes = require("./routes/auth.routes");
-app.use("/api/student", studentRoutes);
-app.use("/api/teacher", teacherRoutes); 
+const studentRoutes = require("./routes/student.routes");
+const teacherRoutes = require("./routes/teacher.routes");
 
 const app = express();
 
@@ -40,6 +40,8 @@ const apiLimiter = rateLimit({
 
 // Apply rate limiting
 app.use("/api/auth", authLimiter);
+app.use("/api/student", apiLimiter);
+app.use("/api/teacher", apiLimiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: "10mb" }));
@@ -64,6 +66,8 @@ app.get("/health", (req, res) => {
 
 // API routes
 app.use("/api/auth", authRoutes);
+app.use("/api/student", studentRoutes);
+app.use("/api/teacher", teacherRoutes);
 
 // 404 handler
 app.use((req, res) => {
