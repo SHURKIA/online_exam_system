@@ -8,6 +8,7 @@ const {
 // Import controllers
 const TeacherAuthController = require("../controllers/teacher-auth.controller");
 const TeacherExamController = require("../controllers/teacher-exam.controller");
+const TeacherQuestionController = require("../controllers/teacher-question.controller");
 
 // Public routes (no auth required)
 router.post("/login", TeacherAuthController.login);
@@ -30,6 +31,13 @@ router.get("/exams/:id", TeacherExamController.getExamDetails);
 router.put("/exams/:id", TeacherExamController.updateExam);
 router.delete("/exams/:id", TeacherExamController.deleteExam);
 
-
+// Question routes
+router.get(
+  "/exams/:examId/questions",
+  TeacherQuestionController.getExamQuestions,
+);
+router.post("/exams/:examId/questions", TeacherQuestionController.addQuestion);
+router.put("/questions/:id", TeacherQuestionController.updateQuestion);
+router.delete("/questions/:id", TeacherQuestionController.deleteQuestion);
 
 module.exports = router;
