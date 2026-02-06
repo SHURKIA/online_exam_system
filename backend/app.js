@@ -4,6 +4,8 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const { testConnection } = require("./config/database");
 
+// Import routes
+const authRoutes = require("./routes/auth.routes");
 
 const app = express();
 
@@ -34,6 +36,9 @@ const apiLimiter = rateLimit({
   message: "Too many requests, please try again later.",
 });
 
+// Apply rate limiting
+app.use("/api/auth", authLimiter);
+
 // Body parsing middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -55,6 +60,8 @@ app.get("/health", (req, res) => {
   });
 });
 
+// API routes
+app.use("/api/auth", authRoutes);
 
 // 404 handler
 app.use((req, res) => {
