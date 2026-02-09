@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'utils/app_colors.dart';
 import 'screens/auth/login_screen.dart';
-
+import 'screens/student/student_dashboard.dart';
+import 'screens/teacher/teacher_dashboard.dart';
 import 'bindings/initial_binding.dart';
 
 void main() {
@@ -37,7 +38,9 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: '/',
       getPages: [
-        GetPage(name: '/', page: () => const LoginScreen())
+        GetPage(name: '/', page: () => const LoginScreen()),
+        GetPage(name: '/student', page: () => const StudentDashboard()),
+        GetPage(name: '/teacher', page: () => const TeacherDashboard()),
       ],
     );
   }
