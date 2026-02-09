@@ -8,6 +8,8 @@ const {
 // Import controllers
 const TeacherAuthController = require("../controllers/teacher-auth.controller");
 const TeacherExamController = require("../controllers/teacher-exam.controller");
+const TeacherQuestionController = require("../controllers/teacher-question.controller");
+const TeacherSubmissionController = require("../controllers/teacher-submission.controller");
 
 // Public routes (no auth required)
 router.post("/login", TeacherAuthController.login);
@@ -30,6 +32,21 @@ router.get("/exams/:id", TeacherExamController.getExamDetails);
 router.put("/exams/:id", TeacherExamController.updateExam);
 router.delete("/exams/:id", TeacherExamController.deleteExam);
 
+// Question routes
+router.get(
+  "/exams/:examId/questions",
+  TeacherQuestionController.getExamQuestions,
+);
+router.post("/exams/:examId/questions", TeacherQuestionController.addQuestion);
+router.put("/questions/:id", TeacherQuestionController.updateQuestion);
+router.delete("/questions/:id", TeacherQuestionController.deleteQuestion);
 
-
+// Submission & grading routes
+router.get("/submissions", TeacherSubmissionController.getSubmissions);
+router.post("/submissions/bulk-grade", TeacherSubmissionController.bulkGrade);
+router.post("/grade/:id", TeacherSubmissionController.gradeSubmission);
+router.get(
+  "/exams/:examId/submissions-summary",
+  TeacherSubmissionController.getExamSubmissionsSummary,
+);
 module.exports = router;
