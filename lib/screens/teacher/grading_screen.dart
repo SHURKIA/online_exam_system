@@ -50,7 +50,10 @@ class GradingScreen extends StatelessWidget {
                   ),
                 ),
                 onTap: () {
-                  final rawId = sub['submission_id'] ?? sub['exam_id'] ?? sub['answer_id'];
+                  final rawId =
+                      sub['submission_id'] ??
+                      sub['exam_id'] ??
+                      sub['answer_id'];
                   if (rawId == null) {
                     Get.snackbar('Error', 'No submission id available');
                     return;
@@ -61,11 +64,7 @@ class GradingScreen extends StatelessWidget {
                     return;
                   }
 
-                  Get.to(
-                    () => SubmissionDetailScreen(
-                      submissionId: id,
-                    ),
-                  );
+                  Get.to(() => SubmissionDetailScreen(submissionId: id));
                 },
               ),
             );

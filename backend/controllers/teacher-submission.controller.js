@@ -185,7 +185,9 @@ const TeacherSubmissionController = {
       );
 
       if (answers.length === 0) {
-        return res.status(404).json({ success: false, message: 'Answer not found' });
+        return res
+          .status(404)
+          .json({ success: false, message: "Answer not found" });
       }
 
       const first = answers[0];
@@ -206,7 +208,10 @@ const TeacherSubmissionController = {
       );
 
       // Calculate total score (may be null values)
-      const totalScore = allAnswers.reduce((acc, row) => acc + (row.score == null ? 0 : Number(row.score)), 0);
+      const totalScore = allAnswers.reduce(
+        (acc, row) => acc + (row.score == null ? 0 : Number(row.score)),
+        0,
+      );
 
       const submission = {
         student_id: studentId,
@@ -218,8 +223,10 @@ const TeacherSubmissionController = {
 
       res.json({ success: true, data: { submission, answers: allAnswers } });
     } catch (error) {
-      console.error('Get submission details error:', error);
-      res.status(500).json({ success: false, message: 'Internal server error' });
+      console.error("Get submission details error:", error);
+      res
+        .status(500)
+        .json({ success: false, message: "Internal server error" });
     }
   },
 

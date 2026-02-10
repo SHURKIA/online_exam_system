@@ -43,7 +43,10 @@ router.delete("/questions/:id", TeacherQuestionController.deleteQuestion);
 
 // Submission & grading routes
 router.get("/submissions", TeacherSubmissionController.getSubmissions);
-router.get("/submissions/:id", TeacherSubmissionController.getSubmissionDetails);
+router.get(
+  "/submissions/:id",
+  TeacherSubmissionController.getSubmissionDetails,
+);
 router.post("/submissions/bulk-grade", TeacherSubmissionController.bulkGrade);
 router.post("/grade/:id", TeacherSubmissionController.gradeSubmission);
 router.get(
