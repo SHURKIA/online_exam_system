@@ -166,6 +166,63 @@ const TeacherSubmissionController = {
     }
   },
 
+  // Get single submission details by answer id (returns all answers for that student's exam)
+  getSubmissionDetails: async (req, res) => {
+    try {
+      const answerId = req.params.id;
+
+      // Get the answer to determine student and exam
+      const [answers] = await pool.execute(
+        `
+                SELECT a.*, q.exam_id, q.id as question_id, q.points, q.question_text, q.question_type, q.correct_answer, s.id as student_id, s.name as student_name, e.title as exam_title
+                FROM answers a
+                JOIN questions q ON a.question_id = q.id
+                JOIN exams e ON q.exam_id = e.id
+                JOIN users s ON a.student_id = s.id
+                WHERE a.id = ?
+            `,
+        [answerId],
+      );
+
+      if (answers.length === 0) {
+        return res.status(404).json({ success: false, message: 'Answer not found' });
+      }
+
+      const first = answers[0];
+      const studentId = first.student_id;
+      const examId = first.exam_id;
+
+      // Fetch all answers for this student for the exam
+      const [allAnswers] = await pool.execute(
+        `
+                SELECT a.id as answer_id, a.answer_text, a.score, a.submitted_at,
+                       q.id as question_id, q.question_text, q.question_type, q.points, q.correct_answer
+                FROM answers a
+                JOIN questions q ON a.question_id = q.id
+                WHERE a.student_id = ? AND q.exam_id = ?
+                ORDER BY q.id
+            `,
+        [studentId, examId],
+      );
+
+      // Calculate total score (may be null values)
+      const totalScore = allAnswers.reduce((acc, row) => acc + (row.score == null ? 0 : Number(row.score)), 0);
+
+      const submission = {
+        student_id: studentId,
+        student_name: first.student_name,
+        exam_id: examId,
+        exam_title: first.exam_title,
+        total_score: totalScore,
+      };
+
+      res.json({ success: true, data: { submission, answers: allAnswers } });
+    } catch (error) {
+      console.error('Get submission details error:', error);
+      res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  },
+
   // Get exam submissions summary
   getExamSubmissionsSummary: async (req, res) => {
     try {

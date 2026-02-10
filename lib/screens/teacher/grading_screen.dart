@@ -50,9 +50,20 @@ class GradingScreen extends StatelessWidget {
                   ),
                 ),
                 onTap: () {
+                  final rawId = sub['submission_id'] ?? sub['exam_id'] ?? sub['answer_id'];
+                  if (rawId == null) {
+                    Get.snackbar('Error', 'No submission id available');
+                    return;
+                  }
+                  final id = int.tryParse(rawId.toString());
+                  if (id == null) {
+                    Get.snackbar('Error', 'Invalid submission id');
+                    return;
+                  }
+
                   Get.to(
                     () => SubmissionDetailScreen(
-                      submissionId: sub['submission_id'],
+                      submissionId: id,
                     ),
                   );
                 },
