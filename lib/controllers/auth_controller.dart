@@ -36,6 +36,7 @@ class AuthController extends GetxController {
         );
       }
     } catch (e) {
+      print('Login error: $e');
       Get.defaultDialog(
         title: 'Error',
         middleText: e.toString(),
