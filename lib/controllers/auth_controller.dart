@@ -29,8 +29,8 @@ class AuthController extends GetxController {
         _navigateBasedOnRole();
       } else {
         Get.defaultDialog(
-          title: 'Error',
-          middleText: 'Login failed',
+          title: 'Login Failed',
+          middleText: response['message'] ?? 'Invalid email or password',
           textConfirm: 'OK',
           onConfirm: () => Get.back(),
         );
@@ -39,7 +39,7 @@ class AuthController extends GetxController {
       print('Login error: $e');
       Get.defaultDialog(
         title: 'Error',
-        middleText: e.toString(),
+        middleText: 'Login failed. Please check your connection or try again.',
         textConfirm: 'OK',
         onConfirm: () => Get.back(),
       );

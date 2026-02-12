@@ -22,12 +22,15 @@ const ExamController = {
                         WHEN ? < e.start_time THEN TIMESTAMPDIFF(SECOND, ?, e.start_time)
                         WHEN ? BETWEEN e.start_time AND e.end_time THEN TIMESTAMPDIFF(SECOND, ?, e.end_time)
                         ELSE 0
-                    END as time_remaining_seconds
+                    END as time_remaining_seconds,
+                    CASE WHEN es.id IS NOT NULL THEN TRUE ELSE FALSE END as is_submitted,
+                    es.total_score
                 FROM exams e
                 LEFT JOIN users u ON e.teacher_id = u.id
                 LEFT JOIN questions q ON e.id = q.exam_id
+                LEFT JOIN exam_submissions es ON e.id = es.exam_id AND es.student_id = ?
                 WHERE e.end_time >= ?
-                GROUP BY e.id
+                GROUP BY e.id, es.id
                 ORDER BY 
                     CASE 
                         WHEN e.start_time <= ? AND e.end_time >= ? THEN 0
@@ -35,7 +38,7 @@ const ExamController = {
                         ELSE 2
                     END,
                     e.start_time ASC
-            `, [now, now, now, now, now, now, now, now, now, now]);
+            `, [now, now, now, now, now, now, studentId, now, now, now, now]);
 
             res.json({
                 success: true,
@@ -81,43 +84,56 @@ const ExamController = {
 
             const exam = exams[0];
 
+            // Check if student has submitted
+            const [submissions] = await pool.execute(
+                'SELECT id, total_score FROM exam_submissions WHERE exam_id = ? AND student_id = ?',
+                [examId, studentId]
+            );
+            const isSubmitted = submissions.length > 0;
+
+            if (isSubmitted) {
+                exam.total_score = submissions[0].total_score;
+            }
+
             // Check if student can access this exam
-            if (ExamUtil.hasExamEnded(exam.end_time)) {
-                // Get questions with correct answers (after exam ended)
+            if (ExamUtil.hasExamEnded(exam.end_time) || isSubmitted) {
+                // Get questions with correct answers (after exam ended OR after submission)
                 const [questions] = await pool.execute(`
                     SELECT q.*
                     FROM questions q
                     WHERE q.exam_id = ?
                     ORDER BY q.id ASC
                 `, [examId]);
-                
+
                 exam.questions = questions;
             } else if (ExamUtil.isExamActive(exam.start_time, exam.end_time)) {
-                // Get questions without correct answers (during exam)
+                // Get questions without correct answers (during exam and NOT submitted)
                 const [questions] = await pool.execute(`
                     SELECT q.id, q.exam_id, q.question_text, q.question_type, q.points
                     FROM questions q
                     WHERE q.exam_id = ?
                     ORDER BY q.id ASC
                 `, [examId]);
-                
+
                 exam.questions = questions;
-                
-                // Get student's submitted answers for this exam
+            } else {
+                // Exam is upcoming - return basic info only
+                exam.questions = [];
+            }
+
+            // Get student's submitted answers if available (for both active/submitted and ended)
+            if (isSubmitted || ExamUtil.isExamActive(exam.start_time, exam.end_time) || ExamUtil.hasExamEnded(exam.end_time)) {
                 const [submittedAnswers] = await pool.execute(`
-                    SELECT a.question_id, a.answer_text, a.submitted_at
+                    SELECT a.question_id, a.answer_text, a.score, a.submitted_at
                     FROM answers a
                     JOIN questions q ON a.question_id = q.id
                     WHERE a.student_id = ? AND q.exam_id = ?
                 `, [studentId, examId]);
-                
+
                 exam.submitted_answers = submittedAnswers.reduce((acc, answer) => {
                     acc[answer.question_id] = answer;
                     return acc;
                 }, {});
-            } else {
-                // Exam is upcoming - return basic info only
-                exam.questions = [];
             }
 
             res.json({

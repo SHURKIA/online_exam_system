@@ -61,17 +61,30 @@ const TeacherExamController = {
         });
       }
 
-      // Validate dates
-      const startTime = new Date(start_time);
-      const endTime = new Date(end_time);
-      const now = new Date();
+      // Validate dates and format for MySQL
+      const formatDate = (date) => {
+        return date.toISOString().slice(0, 19).replace('T', ' ');
+      };
 
-      if (startTime >= endTime) {
+      const startTimeObj = new Date(start_time);
+      const endTimeObj = new Date(end_time);
+
+      if (isNaN(startTimeObj.getTime()) || isNaN(endTimeObj.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid date format",
+        });
+      }
+
+      if (startTimeObj >= endTimeObj) {
         return res.status(400).json({
           success: false,
           message: "End time must be after start time",
         });
       }
+
+      const formattedStartTime = formatDate(startTimeObj);
+      const formattedEndTime = formatDate(endTimeObj);
 
       // Insert exam
       const [result] = await connection.execute(
@@ -79,7 +92,7 @@ const TeacherExamController = {
                 INSERT INTO exams (title, description, teacher_id, start_time, end_time)
                 VALUES (?, ?, ?, ?, ?)
             `,
-        [title, description || null, teacherId, start_time, end_time],
+        [title, description || null, teacherId, formattedStartTime, formattedEndTime],
       );
 
       const examId = result.insertId;
@@ -218,6 +231,10 @@ const TeacherExamController = {
       const updateFields = [];
       const updateValues = [];
 
+      const formatDate = (date) => {
+        return date.toISOString().slice(0, 19).replace('T', ' ');
+      };
+
       if (title !== undefined) {
         updateFields.push("title = ?");
         updateValues.push(title);
@@ -227,12 +244,18 @@ const TeacherExamController = {
         updateValues.push(description);
       }
       if (start_time !== undefined) {
-        updateFields.push("start_time = ?");
-        updateValues.push(start_time);
+        const startTimeObj = new Date(start_time);
+        if (!isNaN(startTimeObj.getTime())) {
+          updateFields.push("start_time = ?");
+          updateValues.push(formatDate(startTimeObj));
+        }
       }
       if (end_time !== undefined) {
-        updateFields.push("end_time = ?");
-        updateValues.push(end_time);
+        const endTimeObj = new Date(end_time);
+        if (!isNaN(endTimeObj.getTime())) {
+          updateFields.push("end_time = ?");
+          updateValues.push(formatDate(endTimeObj));
+        }
       }
 
       if (updateFields.length === 0) {

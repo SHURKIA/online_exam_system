@@ -73,22 +73,38 @@ class ExamTakingController extends GetxController {
       if (response['success'] == true) {
         final data = response['data'];
         final totalScore = data['totalScore'];
+        final gradingStatus = data['gradingStatus'];
+
+        String title = 'Exam Submitted!';
+        String message = 'Great job completing the exam!';
+        String scoreLabel = 'Your Score: $totalScore';
+
+        if (gradingStatus == 'pending') {
+          title = 'Submission Received';
+          scoreLabel = 'Preliminary Score: $totalScore';
+          message =
+              'Some questions require manual grading.\nYour final score will be updated after teacher review.';
+        }
 
         Get.defaultDialog(
-          title: 'Exam Submitted!',
+          title: title,
           content: Column(
             children: [
               const Icon(Icons.check_circle, color: Colors.green, size: 60),
               const SizedBox(height: 16),
               Text(
-                'Your Score: $totalScore',
+                scoreLabel,
+                textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text('Great job completing the exam!'),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+              ),
             ],
           ),
           textConfirm: 'Back to Home',

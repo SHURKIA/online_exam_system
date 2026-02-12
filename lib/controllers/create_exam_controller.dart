@@ -63,7 +63,7 @@ class CreateExamController extends GetxController {
           title: 'Success',
           middleText: isEditing ? 'Exam updated' : 'Exam created',
           textConfirm: 'OK',
-          onConfirm: () => Get.back(),
+        onConfirm: () => Get.back(),
         );
         _teacherController.fetchExams(); // Refresh list
       } else {
@@ -75,9 +75,13 @@ class CreateExamController extends GetxController {
         );
       }
     } catch (e) {
+      print('Submit exam error: $e');
+      // Strip "Exception: " from the message if present
+      String errorMessage = e.toString().replaceAll('Exception: ', '');
+      
       Get.defaultDialog(
         title: 'Error',
-        middleText: 'Failed to save exam: $e',
+        middleText: errorMessage,
         textConfirm: 'OK',
         onConfirm: () => Get.back(),
       );

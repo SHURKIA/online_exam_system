@@ -204,14 +204,13 @@ const AnswerController = {
                                 score = parseFloat(question.points);
                             }
                         }
-                    } else if (question.question_type === 'fill_blank') {
+                    } else if (question.question_type === 'fill_blank' || question.question_type === 'short_answer') {
                         processedAnswer = answer_text.trim();
-                        // Simple case-insensitive match
+                        // Simple case-insensitive match for both fill_blank and short_answer
                         if (processedAnswer.toLowerCase() === question.correct_answer.toLowerCase()) {
                             score = parseFloat(question.points);
                         }
                     }
-                    // short_answer remains 0 for manual grading
 
                     totalScore += score;
 
@@ -271,6 +270,11 @@ const AnswerController = {
 
             await connection.commit();
 
+            // 4. Calculate Grading Status
+            // Since we are now auto-grading ALL types (true_false, fill_blank, short_answer),
+            // the status is always 'completed'.
+            let gradingStatus = 'completed';
+
             res.json({
                 success: true,
                 message: 'Exam submitted successfully',
@@ -278,7 +282,8 @@ const AnswerController = {
                     successful: results,
                     errors: errors.length > 0 ? errors : undefined,
                     totalScore: totalScore,
-                    examId: determinedExamId
+                    examId: determinedExamId,
+                    gradingStatus: gradingStatus // Always completed as everything is auto-graded
                 }
             });
 

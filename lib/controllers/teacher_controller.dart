@@ -42,7 +42,7 @@ class TeacherController extends GetxController {
       print('Error: $e');
       Get.defaultDialog(
         title: 'Error',
-        middleText: 'Failed to load exams: $e',
+        middleText: e.toString().replaceAll('Exception: ', ''),
         textConfirm: 'OK',
         onConfirm: () => Get.back(),
       );
@@ -74,7 +74,7 @@ class TeacherController extends GetxController {
     } catch (e) {
       Get.defaultDialog(
         title: 'Error',
-        middleText: 'Failed to delete exam: $e',
+        middleText: e.toString().replaceAll('Exception: ', ''),
         textConfirm: 'OK',
         onConfirm: () => Get.back(),
       );

@@ -21,60 +21,53 @@ class ApiService extends GetxService {
   }
 
   Future<dynamic> post(String endpoint, Map<String, dynamic> body) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl$endpoint'),
-        headers: _headers,
-        body: jsonEncode(body),
-      );
-      return _processResponse(response);
-    } catch (e) {
-      throw Exception('Network error: $e');
-    }
+    final response = await http.post(
+      Uri.parse('$baseUrl$endpoint'),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+    return _processResponse(response);
   }
 
   Future<dynamic> get(String endpoint) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl$endpoint'),
-        headers: _headers,
-      );
-      return _processResponse(response);
-    } catch (e) {
-      throw Exception('Network error: $e');
-    }
+    final response = await http.get(
+      Uri.parse('$baseUrl$endpoint'),
+      headers: _headers,
+    );
+    return _processResponse(response);
   }
 
   Future<dynamic> put(String endpoint, Map<String, dynamic> body) async {
-    try {
-      final response = await http.put(
-        Uri.parse('$baseUrl$endpoint'),
-        headers: _headers,
-        body: jsonEncode(body),
-      );
-      return _processResponse(response);
-    } catch (e) {
-      throw Exception('Network error: $e');
-    }
+    final response = await http.put(
+      Uri.parse('$baseUrl$endpoint'),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+    return _processResponse(response);
   }
 
   Future<dynamic> delete(String endpoint) async {
-    try {
-      final response = await http.delete(
-        Uri.parse('$baseUrl$endpoint'),
-        headers: _headers,
-      );
-      return _processResponse(response);
-    } catch (e) {
-      throw Exception('Network error: $e');
-    }
+    final response = await http.delete(
+      Uri.parse('$baseUrl$endpoint'),
+      headers: _headers,
+    );
+    return _processResponse(response);
   }
 
   dynamic _processResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Error ${response.statusCode}: ${response.body}');
+      String errorMessage = 'Error ${response.statusCode}';
+      try {
+        final body = jsonDecode(response.body);
+        if (body is Map && body.containsKey('message')) {
+          errorMessage = body['message'];
+        }
+      } catch (_) {
+        // Fallback to default message if parsing fails
+      }
+      throw Exception(errorMessage);
     }
   }
 }

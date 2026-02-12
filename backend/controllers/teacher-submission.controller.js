@@ -9,28 +9,27 @@ const TeacherSubmissionController = {
 
       let query = `
                 SELECT 
-                    a.id as answer_id,
-                    a.answer_text,
-                    a.score,
-                    a.submitted_at,
-                    q.id as question_id,
-                    q.question_text,
-                    q.question_type,
-                    q.points,
-                    q.correct_answer,
+                    es.id as submission_id,
+                    es.total_score,
+                    es.submitted_at,
                     e.id as exam_id,
                     e.title as exam_title,
                     s.id as student_id,
                     s.name as student_name,
                     s.email as student_email,
                     CASE 
-                        WHEN a.score IS NULL THEN 'pending'
+                        WHEN EXISTS (
+                            SELECT 1 FROM answers a 
+                            JOIN questions q ON a.question_id = q.id 
+                            WHERE a.student_id = es.student_id 
+                            AND q.exam_id = es.exam_id 
+                            AND a.score IS NULL
+                        ) THEN 'pending'
                         ELSE 'graded'
                     END as grading_status
-                FROM answers a
-                JOIN questions q ON a.question_id = q.id
-                JOIN exams e ON q.exam_id = e.id
-                JOIN users s ON a.student_id = s.id
+                FROM exam_submissions es
+                JOIN exams e ON es.exam_id = e.id
+                JOIN users s ON es.student_id = s.id
                 WHERE e.teacher_id = ?
             `;
 
@@ -42,19 +41,24 @@ const TeacherSubmissionController = {
         queryParams.push(exam_id);
       }
 
-      if (status === "pending") {
-        query += " AND a.score IS NULL";
-      } else if (status === "graded") {
-        query += " AND a.score IS NOT NULL";
-      }
+      // Filter by status (computed in HAVING or subquery since it's complex)
+      // Simplifying for performance: fetch all then filter in memory if needed, 
+      // or use a simpler check. For now, let's just return all and let frontend filter 
+      // or add a basic check if strictly required.
 
-      query += " ORDER BY a.submitted_at DESC LIMIT 100";
+      query += ` ORDER BY es.submitted_at DESC LIMIT 100`;
 
       const [submissions] = await pool.execute(query, queryParams);
 
+      // Manual filtering for status if requested (since alias in WHERE is tricky in MySQL depending on version)
+      let filteredSubmissions = submissions;
+      if (status) {
+        filteredSubmissions = submissions.filter(s => s.grading_status === status);
+      }
+
       res.json({
         success: true,
-        data: submissions,
+        data: filteredSubmissions,
       });
     } catch (error) {
       console.error("Get submissions error:", error);
@@ -130,6 +134,18 @@ const TeacherSubmissionController = {
         answerId,
       ]);
 
+      // Recalculate total score for the exam submission
+      await connection.execute(`
+          UPDATE exam_submissions es
+          SET total_score = (
+             SELECT SUM(a.score) 
+             FROM answers a 
+             JOIN questions q ON a.question_id = q.id 
+             WHERE a.student_id = es.student_id AND q.exam_id = es.exam_id
+          )
+          WHERE es.student_id = ? AND es.exam_id = (SELECT exam_id FROM questions WHERE id = ?)
+      `, [answer.student_id, answer.question_id]);
+
       // Get updated answer
       const [updatedAnswers] = await connection.execute(
         `
@@ -166,33 +182,35 @@ const TeacherSubmissionController = {
     }
   },
 
-  // Get single submission details by answer id (returns all answers for that student's exam)
+  // Get single submission details by submission_id
   getSubmissionDetails: async (req, res) => {
     try {
-      const answerId = req.params.id;
+      const submissionId = req.params.id;
 
-      // Get the answer to determine student and exam
-      const [answers] = await pool.execute(
+      // Get submission info
+      const [submissions] = await pool.execute(
         `
-                SELECT a.*, q.exam_id, q.id as question_id, q.points, q.question_text, q.question_type, q.correct_answer, s.id as student_id, s.name as student_name, e.title as exam_title
-                FROM answers a
-                JOIN questions q ON a.question_id = q.id
-                JOIN exams e ON q.exam_id = e.id
-                JOIN users s ON a.student_id = s.id
-                WHERE a.id = ?
-            `,
-        [answerId],
+            SELECT es.*, s.name as student_name, e.title as exam_title, e.teacher_id
+            FROM exam_submissions es
+            JOIN users s ON es.student_id = s.id
+            JOIN exams e ON es.exam_id = e.id
+            WHERE es.id = ?
+        `,
+        [submissionId]
       );
 
-      if (answers.length === 0) {
+      if (submissions.length === 0) {
         return res
           .status(404)
-          .json({ success: false, message: "Answer not found" });
+          .json({ success: false, message: "Submission not found" });
       }
 
-      const first = answers[0];
-      const studentId = first.student_id;
-      const examId = first.exam_id;
+      const submission = submissions[0];
+
+      // Verify teacher access
+      if (submission.teacher_id !== req.user.id) {
+        return res.status(403).json({ success: false, message: "Access denied" });
+      }
 
       // Fetch all answers for this student for the exam
       const [allAnswers] = await pool.execute(
@@ -204,24 +222,25 @@ const TeacherSubmissionController = {
                 WHERE a.student_id = ? AND q.exam_id = ?
                 ORDER BY q.id
             `,
-        [studentId, examId],
+        [submission.student_id, submission.exam_id],
       );
 
-      // Calculate total score (may be null values)
+      // Recalculate total score to be fresh
       const totalScore = allAnswers.reduce(
         (acc, row) => acc + (row.score == null ? 0 : Number(row.score)),
         0,
       );
 
-      const submission = {
-        student_id: studentId,
-        student_name: first.student_name,
-        exam_id: examId,
-        exam_title: first.exam_title,
+      const responseSubmission = {
+        id: submission.id, // submission_id
+        student_id: submission.student_id,
+        student_name: submission.student_name,
+        exam_id: submission.exam_id,
+        exam_title: submission.exam_title,
         total_score: totalScore,
       };
 
-      res.json({ success: true, data: { submission, answers: allAnswers } });
+      res.json({ success: true, data: { submission: responseSubmission, answers: allAnswers } });
     } catch (error) {
       console.error("Get submission details error:", error);
       res
